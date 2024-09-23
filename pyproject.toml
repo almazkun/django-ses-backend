@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "django-ses-backend"
+version = "0.0.1"
+description = "Django AWS SES (Amazon Simple Email Service) email backend"
+authors = ["Almaz Kunpeissov <hello@akun.dev>"]
+readme = "README.md"
+packages = [{include = "django_ses_backend", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+django = "^5.1.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
