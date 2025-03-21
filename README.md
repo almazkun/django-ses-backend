@@ -121,8 +121,3 @@ logger = logging.getLogger("django_ses_backend")
 
 ## Contributing
 Feel free to submit issues or pull requests on GitHub to improve this package.
-
----
-
-This documentation provides a clear, structured, and practical guide for using `django-ses-backend`. Let me know if you need any refinements!
-

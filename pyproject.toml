@@ -1,43 +1,53 @@
-[tool.poetry]
+[project]
 name = "django-ses-backend"
 version = "0.0.2"
 description = "Django email backend for AWS SES (Amazon Simple Email Service) without boto3"
-authors = ["Almaz Kunpeissov <hello@akun.dev>"]
-license = "MIT"
-readme = { file = "README.md", content-type = "text/markdown" }
-homepage = "https://github.com/akun/django-ses-backend"
-repository = "https://github.com/akun/django-ses-backend"
-documentation = "https://github.com/akun/django-ses-backend#readme"
+license = { text = "MIT" }
+dynamic = [ "readme", "classifiers" ]
+requires-python = ">=3.11"
+authors = [
+    { name = "Almaz Kunpeissov", email = "hello@akun.dev" },
+]
 keywords = ["django", "email", "aws", "ses", "backend"]
-packages = [{ include = "django_ses_backend", from = "src" }]
+
+
+[project.urls]
+homepage = "https://github.com/almazkun/django-ses-backend"
+repository = "https://github.com/almazkun/django-ses-backend"
+documentation = "https://github.com/almazkun/django-ses-backend#readme"
+"Bug Tracker" = "https://github.com/akun/django-ses-backend/issues"
+
+
+[tool.poetry]
+readme = "README.md"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Topic :: Communications :: Email",
+]
+packages = [{include = "django_ses_backend", from = "src"}]
+
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.14"
+python = ">=3.11,<4.0"
 django = ">=4.2,<5.2"
+
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
 ruff = "^0.11.1"
 tox = "^4.24.2"
 
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/akun/django-ses-backend/issues"
-"Changelog" = "https://github.com/akun/django-ses-backend/releases"
-
-[tool.poetry.classifiers]
-"Development Status :: 4 - Beta"
-"Intended Audience :: Developers"
-"License :: OSI Approved :: MIT License"
-"Operating System :: OS Independent"
-"Programming Language :: Python :: 3"
-"Programming Language :: Python :: 3.11"
-"Programming Language :: Python :: 3.12"
-"Programming Language :: Python :: 3.13"
-"Framework :: Django"
-"Framework :: Django :: 4.2"
-"Framework :: Django :: 5.0"
-"Framework :: Django :: 5.1"
-"Topic :: Communications :: Email"
 
 [build-system]
 requires = ["poetry-core"]
