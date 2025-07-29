@@ -1,6 +1,6 @@
 [project]
 name = "django-ses-backend"
-version = "0.0.2"
+version = "0.1.0"
 description = "Django email backend for AWS SES (Amazon Simple Email Service) without boto3"
 license = { text = "MIT" }
 dynamic = [ "readme", "classifiers" ]
@@ -21,7 +21,7 @@ documentation = "https://github.com/almazkun/django-ses-backend#readme"
 [tool.poetry]
 readme = "README.md"
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -33,6 +33,7 @@ classifiers = [
     "Framework :: Django :: 4.2",
     "Framework :: Django :: 5.0",
     "Framework :: Django :: 5.1",
+    "Framework :: Django :: 5.2",
     "Topic :: Communications :: Email",
 ]
 packages = [{include = "django_ses_backend", from = "src"}]
@@ -40,7 +41,7 @@ packages = [{include = "django_ses_backend", from = "src"}]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4.0"
-django = ">=4.2,<5.2"
+django = ">=4.2,<6"
 
 
 [tool.poetry.group.dev.dependencies]
