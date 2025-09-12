@@ -88,7 +88,7 @@ class TestSESClient(TestCase):
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
         mock_request = MagicMock()
-        result = self.client._handle_response(mock_request)
+        result = self.client._handle_response(mock_request, 1)
         self.assertEqual(result, {"MessageId": "test_message_id"})
 
     @patch("src.django_ses_backend.backends.urlopen")
@@ -234,7 +234,7 @@ class TestSESEmailBackend(TestCase):
         mock_ses_client.assert_called_once_with(
             access_key="test_access_key",
             secret_key="test_secret_key",
-            region="us-west-2",
+            region="us-west-2", endpoint_url=None, endpoint_path=None, timeout=10, max_retries=3, retry_delay=1.0
         )
 
     def test_close(self):
