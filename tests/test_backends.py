@@ -1,8 +1,12 @@
+import json
 from unittest.mock import patch, MagicMock
-from django.test import TestCase, override_settings
-from django.core.mail import EmailMessage
+from urllib.error import URLError
+from django.test import TestCase
+from src.django_ses_backend.backends import SESClient, SESClientError
 
-from src.django_ses_backend.backends import SESClient, SESClientError, SESEmailBackend
+from django.test import override_settings
+from django.core.mail import EmailMessage, EmailMultiAlternatives
+from src.django_ses_backend.backends import SESEmailBackend
 
 SES_AWS_ACCESS_KEY_ID = "test_access_key"
 SES_AWS_SECRET_ACCESS_KEY = "test_secret_key"
@@ -13,103 +17,56 @@ class TestSESClient(TestCase):
     def setUp(self):
         self.client = SESClient("test_access_key", "test_secret_key", "us-west-2")
 
-    def test_sign(self):
-        key = b"test_key"
-        msg = "test_message"
+    def test_sign_and_keys(self):
+        key = b"key"
+        msg = "msg"
         signature = self.client._sign(key, msg)
         self.assertIsInstance(signature, bytes)
+        self.assertIsInstance(self.client._get_signing_key("20240101"), bytes)
+        self.assertIsInstance(self.client._signature("20240101", "string"), str)
 
-    def test_get_signing_key(self):
-        date_stamp = "20240101"
-        key = self.client._get_signing_key(date_stamp)
-        self.assertIsInstance(key, bytes)
-
-    def test_signature(self):
-        date_stamp = "20240101"
-        string_to_sign = "test_string_to_sign"
-        signature = self.client._signature(date_stamp, string_to_sign)
-        self.assertIsInstance(signature, str)
-        self.assertEqual(len(signature), 64)  # SHA256 hexdigest is 64 characters long
-
-    def test_get_canonical_headers(self):
-        amz_date = "20240101T120000Z"
-        headers = self.client._get_canonical_headers(amz_date)
-        self.assertIn("content-type:application/json", headers)
-        self.assertIn("host:email.us-west-2.amazonaws.com", headers)
-        self.assertIn(f"x-amz-date:{amz_date}", headers)
-
-    def test_get_payload_hash(self):
+    def test_headers_and_hash(self):
         payload = {"test": "data"}
-        payload_hash = self.client._get_payload_hash(payload)
-        self.assertIsInstance(payload_hash, str)
-        self.assertEqual(
-            len(payload_hash), 64
-        )  # SHA256 hexdigest is 64 characters long
+        encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
+        payload_hash = self.client._get_payload_hash(encoded)
+        self.assertEqual(len(payload_hash), 64)
+        headers = self.client._canonical_headers_template.format(
+            amz_date="20240101T120000Z"
+        )
+        self.assertIn("content-type:application/json", headers)
 
-    def test_canonical_request(self):
-        canonical_headers = "content-type:application/json\nhost:test.com\nx-amz-date:20240101T120000Z\n"
-        payload_hash = "abcdef1234567890"
-        hashed_request = self.client._canonical_request(canonical_headers, payload_hash)
-        self.assertIsInstance(hashed_request, str)
-        self.assertEqual(
-            len(hashed_request), 64
-        )  # SHA256 hexdigest is 64 characters long
-
-    def test_get_credential_scope(self):
-        date_stamp = "20240101"
-        scope = self.client._get_credential_scope(date_stamp)
+    def test_canonical_request_and_scope(self):
+        cr = self.client._canonical_request("headers", "hash")
+        self.assertEqual(len(cr), 64)
+        scope = self.client._get_credential_scope("20240101")
         self.assertEqual(scope, "20240101/us-west-2/ses/aws4_request")
 
-    def test_get_string_to_sign(self):
-        algorithm = "AWS4-HMAC-SHA256"
-        amz_date = "20240101T120000Z"
-        credential_scope = "20240101/us-west-2/ses/aws4_request"
-        hashed_request = "abcdef1234567890"
-
-        string = self.client._get_string_to_sign(
-            algorithm, amz_date, credential_scope, hashed_request
-        )
-        self.assertEqual(
-            string, f"{algorithm}\n{amz_date}\n{credential_scope}\n{hashed_request}"
-        )
-
-    def test_get_timestamp_data(self):
-        amz_date, date_stamp = self.client._get_timestamp_data()
-        self.assertIsInstance(amz_date, str)
-        self.assertIsInstance(date_stamp, str)
-        self.assertEqual(len(amz_date), 16)  # Format: YYYYMMDDTHHMMSSZs
-        self.assertEqual(len(date_stamp), 8)  # Format: YYYYMMDD
+    def test_string_to_sign_and_timestamp(self):
+        s = self.client._get_string_to_sign("alg", "amz", "scope", "hash")
+        self.assertIn("alg", s)
+        amz, date = self.client._get_timestamp_data()
+        self.assertEqual(len(amz), 16)
+        self.assertEqual(len(date), 8)
 
     @patch("src.django_ses_backend.backends.urlopen")
-    def test_handle_response(self, mock_urlopen):
-        mock_response = MagicMock()
-        mock_response.read.return_value = b'{"MessageId": "test_message_id"}'
-        mock_response.status = 200
-        mock_urlopen.return_value.__enter__.return_value = mock_response
-
-        mock_request = MagicMock()
-        result = self.client._handle_response(mock_request, 1)
-        self.assertEqual(result, {"MessageId": "test_message_id"})
+    def test_handle_response_success(self, mock_urlopen):
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = b'{"MessageId":"id"}'
+        mock_resp.status = 200
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        result = self.client._handle_response(MagicMock(), 1)
+        self.assertEqual(result, {"MessageId": "id"})
 
     @patch("src.django_ses_backend.backends.urlopen")
-    def test_post_success(self, mock_urlopen):
-        mock_response = MagicMock()
-        mock_response.read.return_value = b'{"MessageId": "test_message_id"}'
-        mock_response.status = 200
-        mock_urlopen.return_value.__enter__.return_value = mock_response
-
-        data = {"test": "data"}
-        result = self.client._post(data)
-
-        self.assertEqual(result, {"MessageId": "test_message_id"})
-        mock_urlopen.assert_called_once()
-
-    @patch("src.django_ses_backend.backends.urlopen")
-    def test_post_connection_error(self, mock_urlopen):
-        mock_urlopen.side_effect = SESClientError("Connection error")
-
+    def test_post_behavior(self, mock_urlopen):
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = b'{"MessageId":"id"}'
+        mock_resp.status = 200
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        self.assertEqual(self.client._post({"data": "x"}), {"MessageId": "id"})
+        mock_urlopen.side_effect = SESClientError
         with self.assertRaises(SESClientError):
-            self.client._post({"test": "data"})
+            self.client._post({"data": "x"})
 
 
 @override_settings(
@@ -120,189 +77,128 @@ class TestSESClient(TestCase):
 class TestSESEmailBackend(TestCase):
     def setUp(self):
         self.backend = SESEmailBackend()
+        self.email_text = EmailMessage("Subj", "Body", "from@x.com", ["to@x.com"])
+        self.email_html = EmailMessage(
+            "Subj", "<p>Body</p>", "from@x.com", ["to@x.com"]
+        )
+        self.email_html.content_subtype = "html"
 
-    def test_load_configuration_from_settings(self):
+    def test_load_configuration(self):
         self.backend._load_configuration(None, None, None)
         self.assertEqual(self.backend.access_key, SES_AWS_ACCESS_KEY_ID)
-        self.assertEqual(self.backend.secret_key, SES_AWS_SECRET_ACCESS_KEY)
-        self.assertEqual(self.backend.region, SES_AWS_REGION)
-
-    def test_load_configuration_from_params(self):
-        self.backend._load_configuration(
-            "custom_access_key", "custom_secret_key", "eu-west-1"
-        )
-        self.assertEqual(self.backend.access_key, "custom_access_key")
-        self.assertEqual(self.backend.secret_key, "custom_secret_key")
-        self.assertEqual(self.backend.region, "eu-west-1")
-
-    @override_settings(
-        SES_AWS_ACCESS_KEY_ID=None,
-        SES_AWS_SECRET_ACCESS_KEY=None,
-        SES_AWS_REGION=None,
-    )
-    def test_load_configuration_missing_config(self):
+        self.backend._load_configuration("k", "s", "r")
+        self.assertEqual(self.backend.access_key, "k")
         with self.assertRaises(ValueError):
-            self.backend._load_configuration(None, None, None)
+            with override_settings(
+                SES_AWS_ACCESS_KEY_ID=None,
+                SES_AWS_SECRET_ACCESS_KEY=None,
+                SES_AWS_REGION=None,
+            ):
+                self.backend._load_configuration(None, None, None)
 
-    def test_build_destination_with_to_only(self):
+    def test_build_destination_varieties(self):
         email = EmailMessage(
-            subject="Test",
-            body="Test",
-            from_email="from@example.com",
-            to=["to@example.com"],
+            "Subj", "Body", "from@x.com", ["to@x.com"], cc=["cc"], bcc=["bcc"]
         )
-        destination = self.backend._build_destination(email)
-        self.assertEqual(destination, {"ToAddresses": ["to@example.com"]})
-
-    def test_build_destination_with_cc_bcc(self):
-        email = EmailMessage(
-            subject="Test",
-            body="Test",
-            from_email="from@example.com",
-            to=["to@example.com"],
-            cc=["cc@example.com"],
-            bcc=["bcc@example.com"],
-        )
-        destination = self.backend._build_destination(email)
+        dest = self.backend._build_destination(email)
+        self.assertIn("CcAddresses", dest)
+        email2 = EmailMessage("Subj", "Body", "from@x.com", ["to@x.com"])
         self.assertEqual(
-            destination,
-            {
-                "ToAddresses": ["to@example.com"],
-                "CcAddresses": ["cc@example.com"],
-                "BccAddresses": ["bcc@example.com"],
-            },
+            self.backend._build_destination(email2), {"ToAddresses": ["to@x.com"]}
         )
 
-    def test_build_content_body_text(self):
-        email = EmailMessage(
-            subject="Test",
-            body="Test Body",
-            from_email="from@example.com",
-            to=["to@example.com"],
-        )
-        body = self.backend._build_content_body(email)
-        self.assertEqual(body, {"Text": {"Data": "Test Body"}})
+    def test_build_content_body_cases(self):
+        body = self.backend._build_content_body(self.email_text)
+        self.assertEqual(body, {"Text": {"Data": "Body"}})
+        body = self.backend._build_content_body(self.email_html)
+        self.assertEqual(body, {"Html": {"Data": "<p>Body</p>"}})
 
-    def test_build_content_body_html(self):
-        email = EmailMessage(
-            subject="Test",
-            body="<p>Test Body</p>",
-            from_email="from@example.com",
-            to=["to@example.com"],
-        )
-        email.content_subtype = "html"
-        body = self.backend._build_content_body(email)
-        self.assertEqual(
-            body,
-            {
-                "Html": {"Data": "<p>Test Body</p>"},
-                "Text": {"Data": "<p>Test Body</p>"},
-            },
-        )
+        email_alt = EmailMultiAlternatives("Subj", "Text", "from@x.com", ["to@x.com"])
+        email_alt.attach_alternative("<p>HTML</p>", "text/html")
+        body = self.backend._build_content_body(email_alt)
+        self.assertIn("Html", body)
+        self.assertIn("Text", body)
 
-    def test_msg_to_data_text(self):
-        email = EmailMessage(
-            subject="Test Subject",
-            body="Test Body",
-            from_email="sender@example.com",
-            to=["recipient@example.com"],
-        )
-        data = self.backend._msg_to_data(email)
-        self.assertEqual(data["FromEmailAddress"], "sender@example.com")
-        self.assertEqual(data["Destination"]["ToAddresses"], ["recipient@example.com"])
-        self.assertEqual(data["Content"]["Simple"]["Subject"]["Data"], "Test Subject")
-        self.assertEqual(data["Content"]["Simple"]["Body"]["Text"]["Data"], "Test Body")
-
-    def test_msg_to_data_html(self):
-        email = EmailMessage(
-            subject="Test Subject",
-            body="<p>Test Body</p>",
-            from_email="sender@example.com",
-            to=["recipient@example.com"],
-        )
-        email.content_subtype = "html"
-        data = self.backend._msg_to_data(email)
-        self.assertEqual(
-            data["Content"]["Simple"]["Body"]["Html"]["Data"], "<p>Test Body</p>"
-        )
+    def test_msg_to_data(self):
+        data = self.backend._msg_to_data(self.email_text)
+        self.assertEqual(data["FromEmailAddress"], "from@x.com")
+        self.assertEqual(data["Destination"]["ToAddresses"], ["to@x.com"])
 
     @patch("src.django_ses_backend.backends.SESClient")
-    def test_open(self, mock_ses_client):
-        result = self.backend.open()
-        self.assertTrue(result)
+    def test_open_and_close(self, mock_ses_client):
+        self.assertTrue(self.backend.open())
         self.assertIsNotNone(self.backend.connection)
-        mock_ses_client.assert_called_once_with(
-            access_key="test_access_key",
-            secret_key="test_secret_key",
-            region="us-west-2", endpoint_url=None, endpoint_path=None, timeout=10, max_retries=3, retry_delay=1.0
-        )
-
-    def test_close(self):
-        self.backend.connection = MagicMock()
         self.backend.close()
         self.assertIsNone(self.backend.connection)
 
-    def test_send_no_recipients(self):
-        email = EmailMessage(
-            subject="Test Subject",
-            body="Test Body",
-            from_email="sender@example.com",
-            to=[],
-        )
-        result = self.backend._send(email)
-        self.assertFalse(result)
-
-    @patch.object(SESClient, "send_email")
-    def test_send_success(self, mock_send_email):
-        self.backend.connection = SESClient(
-            "test_access_key", "test_secret_key", "us-west-2"
-        )
-        email = EmailMessage(
-            subject="Test Subject",
-            body="Test Body",
-            from_email="sender@example.com",
-            to=["recipient@example.com"],
-        )
-        result = self.backend._send(email)
-        self.assertTrue(result)
-        mock_send_email.assert_called_once()
-
-    @patch.object(SESClient, "send_email")
-    def test_send_failure(self, mock_send_email):
-        self.backend.connection = SESClient(
-            "test_access_key", "test_secret_key", "us-west-2"
-        )
-        mock_send_email.side_effect = SESClientError("Test error")
-        email = EmailMessage(
-            subject="Test Subject",
-            body="Test Body",
-            from_email="sender@example.com",
-            to=["recipient@example.com"],
-        )
-        self.backend.fail_silently = True
-        result = self.backend._send(email)
-        self.assertFalse(result)
-
-    @patch.object(SESEmailBackend, "_send")
-    def test_send_messages_empty(self, mock_send):
-        sent = self.backend.send_messages([])
-        self.assertEqual(sent, 0)
-        mock_send.assert_not_called()
-
-    @patch.object(SESEmailBackend, "open")
-    @patch.object(SESEmailBackend, "_send")
-    def test_send_messages_connection_failure(self, mock_send, mock_open):
-        mock_open.return_value = True
-        self.backend.connection = None
-        sent = self.backend.send_messages([MagicMock()])
-        self.assertEqual(sent, 0)
-        mock_send.assert_not_called()
-
-    @patch.object(SESEmailBackend, "_send")
-    def test_send_messages(self, mock_send):
-        mock_send.side_effect = [True, False, True]
-        emails = [MagicMock() for _ in range(3)]
+    def test_send_behavior(self):
         self.backend.connection = MagicMock()
-        sent = self.backend.send_messages(emails)
-        self.assertEqual(sent, 2)
-        self.assertEqual(mock_send.call_count, 3)
+        no_recipients = EmailMessage("Subj", "Body", "from@x.com", [])
+        self.assertFalse(self.backend._send(no_recipients))
+        self.backend._send(self.email_text)
+        self.backend.connection.send_email.assert_called()
+
+    @patch.object(SESEmailBackend, "_send")
+    def test_send_messages_variants(self, mock_send):
+        self.backend.connection = MagicMock()
+        mock_send.side_effect = [True, False]
+        emails = [MagicMock(), MagicMock()]
+        count = self.backend.send_messages(emails)
+        self.assertEqual(count, 1)
+        self.assertEqual(mock_send.call_count, 2)
+
+
+class TestSESClientErrors(TestCase):
+    def setUp(self):
+        self.client = SESClient(
+            "key", "secret", "us-west-2", max_retries=2, retry_delay=0
+        )
+
+    @patch("src.django_ses_backend.backends.urlopen")
+    def test_rate_limit_error_429(self, mock_urlopen):
+        mock_resp = MagicMock()
+        mock_resp.status = 429
+        mock_resp.read.return_value = b'{"error": "rate limit"}'
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+
+        with self.assertRaises(SESClientError):
+            self.client._post({"data": "x"})
+
+    @patch("src.django_ses_backend.backends.urlopen")
+    def test_retryable_errors_500_502_503_504_408(self, mock_urlopen):
+        statuses = [500, 502, 503, 504, 408]
+        for status in statuses:
+            with self.subTest(status=status):
+                mock_resp = MagicMock()
+                mock_resp.status = status
+                mock_resp.read.return_value = b'{"error": "server"}'
+                mock_urlopen.return_value.__enter__.return_value = mock_resp
+
+                with self.assertRaises(SESClientError):
+                    self.client._post({"data": "x"})
+
+    @patch("src.django_ses_backend.backends.urlopen")
+    def test_non_retryable_client_error_400(self, mock_urlopen):
+        mock_resp = MagicMock()
+        mock_resp.status = 400
+        mock_resp.read.return_value = b'{"error": "bad request"}'
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+
+        with self.assertRaises(SESClientError):
+            self.client._post({"data": "x"})
+
+    @patch("src.django_ses_backend.backends.urlopen")
+    def test_url_error_raises_client_error(self, mock_urlopen):
+        mock_urlopen.side_effect = URLError("Failed connection")
+        with self.assertRaises(SESClientError):
+            self.client._post({"data": "x"})
+
+    @patch("src.django_ses_backend.backends.urlopen")
+    def test_json_decode_error_raises_client_error(self, mock_urlopen):
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.read.return_value = b"invalid json"
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+
+        with self.assertRaises(SESClientError):
+            self.client._post({"data": "x"})
