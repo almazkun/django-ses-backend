@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.1.3] - 2025-09-12
+* Enhance SES client and backend with retryable errors, refactor request signing, and improve backend connection handling (Almaz Kunpeissov)
 ## [0.1.2] - 2025-09-12
 * Enhance SES backend: retries, HTML+text support, headers, and context manager (Almaz Kunpeissov)
 ## [0.1.1] - 2025-07-29

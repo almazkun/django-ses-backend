@@ -1,6 +1,6 @@
 [project]
 name = "django-ses-backend"
-version = "0.1.2"
+version = "0.1.3"
 description = "Django email backend for AWS SES (Amazon Simple Email Service) without boto3"
 license = { text = "MIT" }
 dynamic = [ "readme", "classifiers" ]
@@ -12,11 +12,11 @@ keywords = ["django", "email", "aws", "ses", "backend"]
 
 
 [project.urls]
-homepage = "https://github.com/almazkun/django-ses-backend"
-repository = "https://github.com/almazkun/django-ses-backend"
-documentation = "https://github.com/almazkun/django-ses-backend#readme"
+Homepage = "https://github.com/almazkun/django-ses-backend"
+Repository = "https://github.com/almazkun/django-ses-backend"
+Documentation = "https://github.com/almazkun/django-ses-backend#readme"
 "Bug Tracker" = "https://github.com/akun/django-ses-backend/issues"
-changelog = "https://github.com/almazkun/django-ses-backend/blob/main/CHANGELOG.md"
+Changelog = "https://github.com/almazkun/django-ses-backend/blob/main/CHANGELOG.md"
 
 
 [tool.poetry]
@@ -46,8 +46,6 @@ django = ">=4.2,<6"
 
 
 [tool.poetry.group.dev.dependencies]
-black = "^25.1.0"
-ruff = "^0.11.1"
 tox = "^4.24.2"
 
 
