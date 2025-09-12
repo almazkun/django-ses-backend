@@ -20,9 +20,11 @@ Django AWS SES (Amazon Simple Email Service) email backend.
 
 Install the package using pip:
 
+
 ```bash
 pip install django-ses-backend
 ```
+[PyPi.com](https://pypi.org/project/django-ses-backend/)
 
 ## AWS Setup
 

@@ -16,6 +16,7 @@ homepage = "https://github.com/almazkun/django-ses-backend"
 repository = "https://github.com/almazkun/django-ses-backend"
 documentation = "https://github.com/almazkun/django-ses-backend#readme"
 "Bug Tracker" = "https://github.com/akun/django-ses-backend/issues"
+changelog = "https://github.com/almazkun/django-ses-backend/blob/main/CHANGELOG.md"
 
 
 [tool.poetry]
