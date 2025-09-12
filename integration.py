@@ -1,7 +1,7 @@
 import django
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from src.django_ses_backend.backends import SESEmailBackend
+from src.django_ses_backend import SESEmailBackend
 import os
 
 settings.configure(
