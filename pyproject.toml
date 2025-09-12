@@ -1,6 +1,6 @@
 [project]
 name = "django-ses-backend"
-version = "0.1.1"
+version = "0.1.2"
 description = "Django email backend for AWS SES (Amazon Simple Email Service) without boto3"
 license = { text = "MIT" }
 dynamic = [ "readme", "classifiers" ]

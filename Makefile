@@ -10,3 +10,6 @@ build:
 
 publish:
 	poetry publish
+
+changelog:
+	@git log -n 1 --pretty=format:"* %s (%an, %ad)" --date=short | cat - CHANGELOG.md > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
