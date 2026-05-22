@@ -137,6 +137,8 @@ class SESClient:
             except json.JSONDecodeError as e:
                 logger.exception(f"SESClient._post: JSONDecodeError {e}")
                 raise SESClientError(f"Failed to parse SES response: {e}") from e
+            except SESClientError:
+                raise
             except Exception as e:
                 logger.exception(f"SESClient._post: Unexpected error {e}")
                 raise SESClientError(f"Unexpected error when sending email: {e}") from e

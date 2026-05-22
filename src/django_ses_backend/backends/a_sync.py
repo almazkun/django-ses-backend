@@ -17,10 +17,11 @@ from ..exceptions import (
 
 try:
     import aiohttp
-
-    AIOHTTP_AVAILABLE = True
-except ImportError:
-    AIOHTTP_AVAILABLE = False
+except ImportError as exc:
+    raise ImportError(
+        "aiohttp is required for async SES support. "
+        "Install it with: pip install django-ses-backend[async]"
+    ) from exc
 
 logger = logging.getLogger("django_ses_backend.backends.async")
 
@@ -40,9 +41,6 @@ class AsyncSESClient:
         connector_limit: int = 100,
         connector_limit_per_host: int = 10,
     ):
-        if not AIOHTTP_AVAILABLE:
-            raise ImportError("aiohttp is required for AsyncSESClient")
-
         self.access_key = access_key
         self.secret_key = secret_key
         self.region = region
@@ -130,6 +128,8 @@ class AsyncSESClient:
             except json.JSONDecodeError as e:
                 logger.exception(f"AsyncSESClient._post: JSONDecodeError {e}")
                 raise SESClientError(f"Failed to parse SES response: {e}") from e
+            except SESClientError:
+                raise
             except Exception as e:
                 logger.exception(f"AsyncSESClient._post: Unexpected error {e}")
                 raise SESClientError(f"Unexpected error when sending email: {e}") from e

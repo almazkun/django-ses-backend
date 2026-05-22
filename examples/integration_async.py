@@ -1,9 +1,11 @@
 import asyncio
+import os
+
 import django
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from src.django_ses_backend.backends.a_sync import AsyncSESEmailBackend
-import os
+
+from django_ses_backend import AsyncSESEmailBackend
 
 settings.configure(
     DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}},
@@ -114,14 +116,14 @@ async def test_with_context_manager():
             from_email=settings.SENDER_EMAIL,
             to=[settings.RECIPIENT_EMAIL],
         )
-        
+
         sent = await backend.send_messages([msg])
         print(f"Sent {sent} email(s) using context manager")
 
 
 async def test_performance_comparison():
     import time
-    
+
     messages = []
     for i in range(10):
         msg = EmailMultiAlternatives(
@@ -133,29 +135,31 @@ async def test_performance_comparison():
         messages.append(msg)
 
     backend = AsyncSESEmailBackend(fail_silently=False)
-    
+
     start_time = time.time()
     sent = await backend.send_messages(messages)
     end_time = time.time()
-    
-    print(f"Sent {sent} emails in {end_time - start_time:.2f} seconds (async concurrent)")
+
+    print(
+        f"Sent {sent} emails in {end_time - start_time:.2f} seconds (async concurrent)"
+    )
 
 
 async def main():
     print("Testing Async SES Email Backend")
     print("=" * 40)
-    
+
     print("\n1. Single Email Test:")
     await test_send_single_email()
-    
-    #print("\n2. Multiple Emails Test:")
-    #await test_send_multiple_emails()
-    
-    #print("\n3. Context Manager Test:")
-    #await test_with_context_manager()
-    
-    #print("\n4. Performance Test:")
-    #await test_performance_comparison()
+
+    # print("\n2. Multiple Emails Test:")
+    # await test_send_multiple_emails()
+
+    # print("\n3. Context Manager Test:")
+    # await test_with_context_manager()
+
+    # print("\n4. Performance Test:")
+    # await test_performance_comparison()
 
 
 if __name__ == "__main__":

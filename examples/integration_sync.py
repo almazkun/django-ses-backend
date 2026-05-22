@@ -1,8 +1,10 @@
+import os
+
 import django
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from src.django_ses_backend import SESEmailBackend
-import os
+
+from django_ses_backend import SESEmailBackend
 
 settings.configure(
     DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}},

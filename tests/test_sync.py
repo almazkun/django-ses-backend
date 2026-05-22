@@ -87,7 +87,7 @@ class TestSESEmailBackend(TestCase):
         self.assertEqual(data["FromEmailAddress"], "from@x.com")
         self.assertEqual(data["Destination"]["ToAddresses"], ["to@x.com"])
 
-    @patch("src.django_ses_backend.client.SESClient")
+    @patch("src.django_ses_backend.backends.sync.SESClient")
     def test_open_and_close(self, mock_ses_client):
         self.assertTrue(self.backend.open())
         self.assertIsNotNone(self.backend.connection)
