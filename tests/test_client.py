@@ -1,17 +1,11 @@
-
 import json
 from unittest.mock import patch, MagicMock
 from urllib.error import URLError
 from django.test import TestCase
 
-from django.test import override_settings
-from django.core.mail import EmailMessage, EmailMultiAlternatives
 
-from src.django_ses_backend import SESEmailBackend
 from src.django_ses_backend.client import SESClient
 from src.django_ses_backend.exceptions import SESClientError
-
-from src.django_ses_backend.converters import  msg_to_data,build_content_body,build_destination
 
 
 class TestSESClientErrors(TestCase):

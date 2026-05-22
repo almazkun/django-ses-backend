@@ -31,8 +31,12 @@ class BaseSESBackend:
         self.endpoint_url = getattr(settings, "SES_ENDPOINT_URL", None)
         self.endpoint_path = getattr(settings, "SES_ENDPOINT_PATH", None)
         self.timeout = getattr(settings, "SES_TIMEOUT", 10)
+        self.connect_timeout = getattr(settings, "SES_CONNECT_TIMEOUT", 5)
         self.max_retries = getattr(settings, "SES_MAX_RETRIES", 3)
         self.retry_delay = getattr(settings, "SES_RETRY_DELAY", 1.0)
+        self.concurrency_limit = getattr(settings, "SES_CONCURRENCY_LIMIT", 10)
+        self.connector_limit = getattr(settings, "SES_CONNECTOR_LIMIT", 100)
+        self.connector_limit_per_host = getattr(settings, "SES_CONNECTOR_LIMIT_PER_HOST", 10)
 
         if not all([self.access_key, self.secret_key, self.region]):
             raise ValueError(

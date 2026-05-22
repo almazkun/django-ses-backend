@@ -66,7 +66,9 @@ class SESEmailBackend(BaseEmailBackend, BaseSESBackend):
             )
             return True
         except Exception as e:
-            logger.exception(f"SESEmailBackend.open: Failed to open SES connection: {e}")
+            logger.exception(
+                f"SESEmailBackend.open: Failed to open SES connection: {e}"
+            )
             if not self.fail_silently:
                 raise
         return False

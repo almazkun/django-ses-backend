@@ -11,7 +11,9 @@ def build_destination(email_message: EmailMessage) -> Dict[str, List[str]]:
     return destination
 
 
-def extract_alternatives(email_message: EmailMessage) -> Tuple[Optional[str], Optional[str]]:
+def extract_alternatives(
+    email_message: EmailMessage,
+) -> Tuple[Optional[str], Optional[str]]:
     text_content, html_content = None, None
 
     if email_message.body:

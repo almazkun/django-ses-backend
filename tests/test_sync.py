@@ -10,7 +10,6 @@ from src.django_ses_backend.converters import (
     build_destination,
 )
 
-
 SES_AWS_ACCESS_KEY_ID = "test_access_key"
 SES_AWS_SECRET_ACCESS_KEY = "test_secret_key"
 SES_AWS_REGION = "us-west-2"
@@ -42,6 +41,25 @@ class TestSESEmailBackend(TestCase):
                 SES_AWS_REGION=None,
             ):
                 self.backend._load_configuration(None, None, None)
+
+    def test_load_configuration_async_defaults(self):
+        self.assertEqual(self.backend.concurrency_limit, 10)
+        self.assertEqual(self.backend.connector_limit, 100)
+        self.assertEqual(self.backend.connector_limit_per_host, 10)
+        self.assertEqual(self.backend.connect_timeout, 5)
+
+    def test_load_configuration_async_settings_override(self):
+        with override_settings(
+            SES_CONCURRENCY_LIMIT=5,
+            SES_CONNECTOR_LIMIT=50,
+            SES_CONNECTOR_LIMIT_PER_HOST=3,
+            SES_CONNECT_TIMEOUT=2,
+        ):
+            self.backend._load_configuration(None, None, None)
+        self.assertEqual(self.backend.concurrency_limit, 5)
+        self.assertEqual(self.backend.connector_limit, 50)
+        self.assertEqual(self.backend.connector_limit_per_host, 3)
+        self.assertEqual(self.backend.connect_timeout, 2)
 
     def test_build_destination_varieties(self):
         email = EmailMessage(
